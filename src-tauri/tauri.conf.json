@@ -1,10 +1,10 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
   "productName": "Exambrowser",
   "version": "1.0.0",
   "identifier": "com.smanteg.exambrowser",
   "build": {
     "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../src"
   },
@@ -17,9 +17,17 @@
         "decorations": false,
         "alwaysOnTop": true
       }
-    ],
-    "security": {
-      "csp": null
-    }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
   }
 }
