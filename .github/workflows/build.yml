@@ -36,6 +36,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v1.0.0
+          releaseName: 'Exambrowser v1.0.0'
+          releaseBody: 'File installer Windows untuk Exambrowser.'
           releaseDraft: false
           prerelease: false
 

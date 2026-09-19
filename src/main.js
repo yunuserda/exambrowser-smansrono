@@ -20,37 +20,30 @@ localStorage.setItem("device_id", deviceID);
 let linkUjianDariDatabase = "";
 let sedangMemuatLink = false;
 let sudahMulaiUjian = false;
-let sedangTerblokir = false;
-let timerHukuman = null;
 
-// Track status penekanan tombol Shift + S
-let shiftSPressed = false;
-let shiftSTimeout = null;
+// Track status penekanan tombol
+let shiftPressed = false;
+let sPressed = false;
 
-// 1. Dapatkan Link Ujian Terbaru dari Database (Dinamis dari PHP)
+// 1. Dapatkan Link Ujian Terbaru dari Database
 async function ambilLinkTerbaru() {
   sedangMemuatLink = true;
   try {
-    // Tambahkan timestamp untuk menghindari caching browser
     const response = await fetch(`${URL_GET_LINK}?_=` + Date.now());
     const data = await response.json();
     
     if (data && data.link_sat && data.link_sat.trim() !== "") {
       linkUjianDariDatabase = data.link_sat.trim();
-      console.log("Link ujian berhasil dimuat dinamis:", linkUjianDariDatabase);
-    } else {
-      console.warn("Link ujian di database kosong/belum diatur.");
-      linkUjianDariDatabase = "";
+      console.log("Link ujian dimuat:", linkUjianDariDatabase);
     }
   } catch (err) {
-    console.error("Gagal mengambil link ujian dari server:", err);
-    linkUjianDariDatabase = "";
+    console.error("Gagal mengambil link ujian:", err);
   } finally {
     sedangMemuatLink = false;
   }
 }
 
-// 2. Hubungi Server Ujian (Cek Status / Tambah Hukuman / Registrasi)
+// 2. Hubungi Server Ujian
 async function hubungiServer(aksi, extraData = {}) {
   const formData = new FormData();
   formData.append("device_id", deviceID);
@@ -72,109 +65,113 @@ async function hubungiServer(aksi, extraData = {}) {
     }
 
     const part = textRes.split("|");
-    const sisaHukuman = parseInt(part[1] || "0", 10);
-
-    if (sisaHukuman > 0) {
-      sedangTerblokir = true;
+    if (part[0] === "BELUM_REGIS") {
+      layoutRegistrasi.classList.remove('hidden');
       layoutPeringatan.classList.add('hidden');
-      layoutRegistrasi.classList.add('hidden');
-      mulaiLayarBlokir(sisaHukuman);
     } else {
-      if (sedangTerblokir) {
-        sedangTerblokir = false;
-        layoutBlokir.classList.add('hidden');
-        if (timerHukuman) clearInterval(timerHukuman);
-        if (sudahMulaiUjian && linkUjianDariDatabase) window.location.href = linkUjianDariDatabase;
-      }
-
-      if (!sudahMulaiUjian) {
-        if (part[0] === "BELUM_REGIS") {
-          layoutRegistrasi.classList.remove('hidden');
-          layoutPeringatan.classList.add('hidden');
-        } else {
-          layoutRegistrasi.classList.add('hidden');
-          layoutPeringatan.classList.remove('hidden');
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Gagal terhubung ke API:", err);
-    if (aksi === "registrasi") {
       layoutRegistrasi.classList.add('hidden');
       layoutPeringatan.classList.remove('hidden');
     }
+  } catch (err) {
+    console.error("Gagal terhubung ke API:", err);
+    layoutRegistrasi.classList.add('hidden');
+    layoutPeringatan.classList.remove('hidden');
   }
 }
 
-// 3. Layar Blokir (Timer Hukuman)
-function mulaiLayarBlokir(durasiMs) {
-  layoutBlokir.classList.remove('hidden');
-  let sisaDetik = Math.floor(durasiMs / 1000);
+// Impor fungsi window dari Tauri v2 jika tersedia
+const getTauriWindow = () => {
+  if (window.__TAURI__ && window.__TAURI__.window) {
+    return window.__TAURI__.window.getCurrentWindow();
+  }
+  return null;
+};
 
-  if (timerHukuman) clearInterval(timerHukuman);
-  
-  teksTimer.innerText = `AKSES DIKUNCI\n\n${sisaDetik} detik`;
+// 3. DETEKSI KEHILANGAN FOKUS & PAKSA FOKUS KEMBALI (ANTI ALT/CMD+TAB)
+window.addEventListener('blur', async () => {
+  if (sudahMulaiUjian) {
+    // Catat pelanggaran ke server
+    hubungiServer("tambah");
+  }
 
-  timerHukuman = setInterval(() => {
-    sisaDetik--;
-    teksTimer.innerText = `AKSES DIKUNCI\n\n${sisaDetik} detik`;
-    if (sisaDetik <= 0) {
-      clearInterval(timerHukuman);
-      hubungiServer("cek");
+  // Paksa jendela aplikasi kembali ke depan secara instan
+  try {
+    const appWindow = getTauriWindow();
+    if (appWindow) {
+      await appWindow.setFocus();
+      await appWindow.setAlwaysOnTop(true);
     }
-  }, 1000);
-}
+  } catch (err) {
+    console.error("Gagal merebut fokus kembali:", err);
+  }
+});
 
-// 4. Deteksi Kehilangan Fokus
+// 4. PROTEKSI KEYBOARD & SHORTCUT KELUAR (SHIFT + S + X)
+const pressedCodes = new Set();
+
+// Matikan Context Menu (Klik Kanan)
+window.addEventListener('contextmenu', (e) => e.preventDefault(), true);
+
+// Blokir semua tombol dan shortcut kecuali Shift + S
+window.addEventListener('keydown', (e) => {
+  pressedCodes.add(e.code);
+
+  const isShiftPressed = e.shiftKey || pressedCodes.has('ShiftLeft') || pressedCodes.has('ShiftRight');
+  const isSPressed = pressedCodes.has('KeyS');
+
+  // 1. CEK SHORTCUT KELUAR: Shift + S
+  if (isShiftPressed && isSPressed) {
+    // Jika hanya Shift + S, izinkan keluar
+    if (pressedCodes.size <= 2) {
+      e.preventDefault();
+      e.stopPropagation();
+      pressedCodes.clear();
+      tutupAplikasiInstan();
+      return;
+    }
+  }
+
+  // 2. IZINKAN TOMBOL MENGETIK BIASA HANYA SAAT BERADA DI INPUT / TEXTAREA
+  const activeEl = document.activeElement;
+  const isInputActive = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+  // Daftar tombol yang diizinkan saat mengetik
+  const isAllowedCharacter = 
+    e.key.length === 1 || // Huruf, angka, simbol biasa
+    e.code === 'Backspace' ||
+    e.code === 'Delete' ||
+    e.code === 'ArrowLeft' ||
+    e.code === 'ArrowRight' ||
+    e.code === 'ArrowUp' ||
+    e.code === 'ArrowDown' ||
+    e.code === 'Tab' ||
+    e.code === 'Space' ||
+    e.code === 'Enter';
+
+  // Jika sedang mengetik di form input (misal NIS/Nama atau soal isian), izinkan tombol ketik biasa TANPA Modifier (Ctrl/Alt/Meta)
+  if (isInputActive && isAllowedCharacter && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    return; // Biarkan input bekerja
+  }
+
+  // 3. BLOKIR SEMUA TOMBOL & SHORTCUT LAINNYA
+  // (Termasuk F1-F12, Ctrl+C, Ctrl+V, Alt+Tab, Escape, Ctrl+R, dll.)
+  e.preventDefault();
+  e.stopPropagation();
+}, true); // UseCapture = true agar mencegat event sebelum elemen lain
+
+window.addEventListener('keyup', (e) => {
+  pressedCodes.delete(e.code);
+}, true);
+
+// Bersihkan state jika kehilangan fokus
 window.addEventListener('blur', () => {
-  if (sudahMulaiUjian && !sedangTerblokir) {
+  pressedCodes.clear();
+  if (sudahMulaiUjian) {
     hubungiServer("tambah");
   }
 });
 
-// 5. PROTEKSI KEYBOARD & TOMBOL KELUAR (SHIFT + S + X)
-window.addEventListener('contextmenu', (e) => e.preventDefault());
-
-window.addEventListener('keydown', (e) => {
-  const key = e.key.toUpperCase();
-
-  if (e.shiftKey && key === 'S') {
-    shiftSPressed = true;
-    clearTimeout(shiftSTimeout);
-    shiftSTimeout = setTimeout(() => {
-      shiftSPressed = false;
-    }, 2000);
-    return;
-  }
-
-  if (shiftSPressed && key === 'X') {
-    shiftSPressed = false;
-    clearTimeout(shiftSTimeout);
-    
-    if (confirm("Apakah Anda yakin ingin keluar dari Exambrowser?")) {
-      if (window.__TAURI__ && window.__TAURI__.window) {
-        window.__TAURI__.window.getCurrentWindow().close();
-      } else if (window.__TAURI_INTERNALS__) {
-        window.__TAURI_INTERNALS__.invoke('plugin:window|close');
-      } else {
-        window.close();
-      }
-    }
-    e.preventDefault();
-    return;
-  }
-
-  const isTargetInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
-  if (isTargetInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    return;
-  }
-
-  if (e.ctrlKey || e.metaKey || e.altKey || key.startsWith('F')) {
-    e.preventDefault();
-  }
-});
-
-// 6. Event Button Handlers
+// 5. Handling Tombol UI
 btnSimpan.addEventListener('click', (e) => {
   e.preventDefault();
   const nama = inputNama.value.trim();
@@ -190,30 +187,23 @@ btnSimpan.addEventListener('click', (e) => {
 btnMengerti.addEventListener('click', async (e) => {
   e.preventDefault();
 
-  // Jika sedang memuat link dari server, tunggu sejenak
-  if (sedangMemuatLink) {
-    alert("Sedang mengambil link ujian dari server, harap tunggu sejenak...");
-    return;
-  }
-
-  // Jika link belum ada, coba panggil lagi
   if (!linkUjianDariDatabase) {
     btnMengerti.innerText = "MEMUAT LINK...";
     await ambilLinkTerbaru();
     btnMengerti.innerText = "SAYA MENGERTI DAN SIAP";
   }
 
-  // Jika link di database masih kosong
   if (!linkUjianDariDatabase) {
-    alert("Link ujian belum diatur di server (Database). Silakan hubungi proktor!");
+    alert("Link ujian belum diatur di server. Silakan hubungi proktor!");
     return;
   }
 
   sudahMulaiUjian = true;
-  // Buka URL dinamis yang didapatkan dari database
+  
+  // Lakukan redirect halaman secara langsung (Menghindari masalah blank hitam Iframe)
   window.location.href = linkUjianDariDatabase;
 });
 
-// Inisialisasi awal
+// Inisialisasi
 ambilLinkTerbaru();
 hubungiServer("cek");
