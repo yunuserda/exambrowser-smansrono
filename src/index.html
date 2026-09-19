@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exambrowser Windows</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: Arial, sans-serif; background: #111; color: #fff; }
+    
+    .overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 9999; text-align: center; padding: 20px;
+    }
+    #layout-registrasi { background: #1e1e2f; }
+    #layout-peringatan { background: #0f172a; }
+    #layout-blokir { background: #7f1d1d; }
+    
+    input {
+      padding: 12px; margin: 10px 0; width: 300px; border-radius: 6px;
+      border: 1px solid #444; font-size: 16px; outline: none;
+    }
+    button {
+      padding: 12px 24px; margin-top: 15px; border-radius: 6px; border: none;
+      background: #2563eb; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Layar Registrasi -->
+  <div id="layout-registrasi" class="overlay">
+    <h2>REGISTRASI PESERTA UJIAN</h2>
+    <p style="margin-bottom: 15px;">Masukkan Identitas Sebelum Memulai</p>
+    <input type="text" id="input-nama" placeholder="Nama Lengkap" />
+    <input type="text" id="input-nis" placeholder="NIS / NISN" />
+    <button id="btn-simpan">SIMPAN DATA</button>
+  </div>
+
+  <!-- Layar Peringatan / Siap Ujian -->
+  <div id="layout-peringatan" class="overlay hidden">
+    <h2>EXAMBROWSER SMAN SRONO</h2>
+    <p style="margin: 15px 0;">Dilarang membuka aplikasi lain selama ujian berlangsung.</p>
+    <button id="btn-mengerti">SAYA MENGERTI DAN SIAP</button>
+  </div>
+
+  <!-- Layar Blokir (Hukuman) -->
+  <div id="layout-blokir" class="overlay hidden">
+    <h1 style="font-size: 3rem; color: #fca5a5;">AKSES DIKUNCI</h1>
+    <h2 id="teks-timer" style="margin-top: 20px; font-size: 2rem;">-- detik</h2>
+  </div>
+
+  <script src="./main.js"></script>
+</body>
+</html>

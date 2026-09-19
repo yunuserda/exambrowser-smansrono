@@ -1,0 +1,15 @@
+{
+  "name": "exambrowser",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "serve src -l 1420",
+    "build": "echo 'No frontend build step needed'",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "serve": "^14.2.0"
+  }
+}
