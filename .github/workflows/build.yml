@@ -1,4 +1,4 @@
-name: Build Exambrowser
+name: Build Exambrowser Windows
 
 on:
   push:
@@ -10,17 +10,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-tauri:
+  build-tauri-windows:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'macos-latest'
-          - platform: 'windows-latest'
+    runs-on: windows-latest
 
-    runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -36,7 +30,7 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Build Tauri App
+      - name: Build Tauri App (Windows Only)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,15 +40,12 @@ jobs:
           prerelease: false
           args: --bundle
 
-      - name: Upload Artifacts
+      - name: Upload Artifacts (.exe & .msi)
         uses: actions/upload-artifact@v4
         with:
-          name: Exambrowser-${{ matrix.platform }}
+          name: Exambrowser-Windows
           path: |
             **/target/release/*.exe
-            **/target/release/exambrowser-smansrono
             **/target/release/bundle/**/*.exe
             **/target/release/bundle/**/*.msi
-            **/target/release/bundle/**/*.dmg
-            **/target/release/bundle/**/*.app
           if-no-files-found: warn
