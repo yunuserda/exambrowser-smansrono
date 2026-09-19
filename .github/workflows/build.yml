@@ -38,7 +38,6 @@ jobs:
           tagName: v1.0.0
           releaseDraft: false
           prerelease: false
-          args: --bundle
 
       - name: Upload Artifacts (.exe & .msi)
         uses: actions/upload-artifact@v4
