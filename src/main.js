@@ -1,6 +1,6 @@
 // URL Konfigurasi
-const URL_API = "https://smansrono.sch.id/link_ujian/proses_hukuman.php";
-const URL_GET_LINK = "https://smansrono.sch.id/link_ujian/get_sat.php";
+const URL_API = "https://smansrono.sch.id/link-ujian/proses_hukuman.php";
+const URL_GET_LINK = "https://smansrono.sch.id/link-ujian/get_sat.php";
 const API_KEY = "SMANSRONO_SECRET_2026";
 
 // Elemen DOM
